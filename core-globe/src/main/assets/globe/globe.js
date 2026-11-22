@@ -1,10 +1,11 @@
 'use strict';
 /* God's Eye View Android - core globe (Stage 1).
    Keyless basemap ladder (plan Q4): Esri World Imagery first, OSM if Esri
-   tiles keep failing. Keyless terrain from AWS Terrain Tiles
-   (quantized-mesh, Mapzen/Tilezen data, ODbL/attribution in Credits);
-   if the terrain service is unreachable the globe continues on the
-   ellipsoid - imagery is never blocked by terrain. */
+   tiles keep failing. Terrain is the ellipsoid for Stage 1: the AWS
+   Terrain Tiles quantized-mesh dataset this page originally loaded no
+   longer exists (issue #12 - its layer.json 404s and the never-ready
+   provider silently blocked ALL globe rendering). A working terrain
+   source is Stage 2 work (issue #15). */
 (function () {
   var bridge = window.AndroidBridge || {
     onGlobeReady: function () {}, onCameraChanged: function () {},
@@ -29,7 +30,6 @@
   });
 
   var ESRI_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-  var TERRAIN_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/tiles/terrain/';
 
   var viewer = new Cesium.Viewer('cesiumContainer', {
     animation: false, timeline: false, baseLayerPicker: false,
@@ -47,7 +47,6 @@
       href ? '<a href="' + href + '" target="_blank" rel="noopener">' + text + '</a>' : text, true));
   }
   addCredit('Imagery © Esri &mdash; Source: Esri, Maxar, Earthstar Geographics', 'https://www.esri.com');
-  addCredit('Terrain: AWS Terrain Tiles (Mapzen/Tilezen, ODbL)', 'https://registry.opendata.aws/terrain-tiles/');
   addCredit('© OpenStreetMap contributors', 'https://www.openstreetmap.org/copyright');
 
   var currentBasemap = 'esri';
@@ -87,32 +86,16 @@
     currentBasemap = id;
   }
 
-  /* Terrain self-heal (issue #12): if the AWS terrain provider loads but
-     its tiles keep erroring in this WebView, surface tiles never become
-     renderable and the globe disappears entirely (only the skybox shows).
-     Same pattern as the imagery fallback: 8 tile errors and we revert to
-     the ellipsoid, which always renders. */
+  /* Terrain (issue #12 root cause, verified by bisect): the AWS Terrain
+     Tiles quantized-mesh dataset is gone from its bucket (layer.json
+     404s, no tiles/ prefix exists). CesiumTerrainProvider.fromUrl on it
+     resolved into a provider that never became ready, and the globe
+     surface waits for terrain readiness forever - zero tiles, no error.
+     Stage 1 therefore stays on the ellipsoid, which renders. Working
+     terrain is Stage 2 (issue #15). terrainErrorCount stays in the
+     diagnostics as a canary: it must remain 0 now that nothing swaps. */
   var terrainActive = 'ellipsoid';
   var terrainErrorCount = 0;
-  var terrainReverted = false;
-  Cesium.CesiumTerrainProvider.fromUrl(TERRAIN_URL, { requestVertexNormals: false })
-    .then(function (provider) {
-      provider.errorEvent.addEventListener(function () {
-        terrainErrorCount++;
-        if (!terrainReverted && terrainErrorCount >= 8) {
-          terrainReverted = true;
-          terrainActive = 'ellipsoid (reverted after ' + terrainErrorCount + ' terrain tile errors)';
-          viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
-          sendDiagnostics();
-        }
-      });
-      viewer.terrainProvider = provider;
-      terrainActive = 'aws-terrain-tiles';
-    })
-    .catch(function (err) {
-      terrainActive = 'ellipsoid (terrain provider failed to load: ' +
-        (err && err.message || err || 'unknown') + ')';
-    });
 
   function reportCamera() {
     var cam = viewer.camera;
