@@ -22,7 +22,20 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Unit tests and debug build
-        run: ./gradlew :layer-api:test :core-globe:testDebugUnitTest :core-ui:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug --console=plain
+        # Up to 3 attempts: a transient repository error (e.g. HTTP 429
+        # from a Maven host) must not fail CI by itself. A real test or
+        # compile failure fails all 3 attempts and still fails the run.
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew :layer-api:test :core-globe:testDebugUnitTest :core-ui:testDebugUnitTest :app:testDebugUnitTest :app:assembleDebug --console=plain; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Attempt $attempt failed; retrying in 60s..."
+              sleep 60
+            fi
+          done
+          exit 1
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
