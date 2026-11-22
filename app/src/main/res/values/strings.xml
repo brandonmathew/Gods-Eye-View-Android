@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plan Q31: English only, every string in resources. -->
+<resources>
+    <string name="app_name">God\'s Eye View</string>
+    <string name="reset_globe">Reset Globe</string>
+    <string name="basemap_esri">Esri Satellite</string>
+    <string name="basemap_osm">OpenStreetMap</string>
+    <string name="globe_error">The globe hit a problem loading. Check your connection.</string>
+    <string name="crash_title">The app crashed</string>
+    <string name="crash_no_report">No crash report was saved.</string>
+    <string name="crash_copy">Copy crash details</string>
+    <string name="crash_restart">Restart</string>
+    <string name="crash_close">Close</string>
+</resources>

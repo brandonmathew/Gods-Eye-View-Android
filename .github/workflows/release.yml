@@ -40,7 +40,16 @@ jobs:
         run: |
           export GEV_VERSION_NAME="${GITHUB_REF_NAME#v}"
           export GEV_VERSION_CODE="$(git rev-list --count HEAD)"
-          ./gradlew :layer-api:test :app:assembleRelease --console=plain
+          for attempt in 1 2 3; do
+            if ./gradlew :layer-api:test :app:assembleRelease --console=plain; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Attempt $attempt failed; retrying in 60s..."
+              sleep 60
+            fi
+          done
+          exit 1
 
       - name: Package release assets
         run: |

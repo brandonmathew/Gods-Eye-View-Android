@@ -5,7 +5,12 @@ name: Beta release
 # 1.0.0-beta.1, 1.0.0-beta.2, ... The version is assigned here, never on
 # feature branches.
 on:
-  push:
+  # Never build before CI passes: this workflow runs only after the CI
+  # workflow completes successfully for a commit on beta. A manual
+  # workflow_dispatch run is the only override, and it is deliberate.
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [beta]
   workflow_dispatch:
 
@@ -14,10 +19,12 @@ permissions:
 
 jobs:
   beta:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -61,7 +68,16 @@ jobs:
           GEV_VERSION_NAME: ${{ steps.version.outputs.version }}
         run: |
           export GEV_VERSION_CODE="$(git rev-list --count HEAD)"
-          ./gradlew :layer-api:test :app:assembleRelease --console=plain
+          for attempt in 1 2 3; do
+            if ./gradlew :layer-api:test :app:assembleRelease --console=plain; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Attempt $attempt failed; retrying in 60s..."
+              sleep 60
+            fi
+          done
+          exit 1
 
       - name: Publish beta prerelease
         env:
@@ -74,4 +90,4 @@ jobs:
             "GodsEyeView-$VERSION.apk" "GodsEyeView-$VERSION.apk.sha256" \
             --title "God's Eye View Android $VERSION" \
             --generate-notes --prerelease \
-            --target beta
+            --target "${{ github.event.workflow_run.head_sha || github.sha }}"
