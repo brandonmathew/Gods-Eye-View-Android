@@ -54,6 +54,7 @@ fun CreditsScreen(
             CreditEntry(R.string.credit_esri_name, R.string.credit_esri_terms)
             CreditEntry(R.string.credit_osm_name, R.string.credit_osm_terms)
             CreditEntry(R.string.credit_terrarium_name, R.string.credit_terrarium_terms)
+            CreditEntry(R.string.credit_geocoding_name, R.string.credit_geocoding_terms)
             CreditEntry(R.string.credit_app_name, R.string.credit_app_terms)
         }
     }
