@@ -41,6 +41,37 @@
   viewer.scene.globe.enableLighting = false;
   viewer.scene.fog.enabled = true;
 
+  /* Camera matching with the original God's Eye View (issue #38,
+     Brandon's decision 2026-11-22; original:
+     src/render/cesium/applicationViewer.js):
+     1. Touch pinch zoom: Cesium's zoomFactor x3 on coarse pointers -
+        a phone pinch spans fewer pixels than a desktop gesture.
+     2. Zoom-out cap: the globe never shrinks below 30% of the screen
+        height. Cesium sets no limit; the original derives the maximum
+        distance from the camera fovy each frame and never lets the
+        limit sit below the camera's current height. */
+  var cameraController = viewer.scene.screenSpaceCameraController;
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    cameraController.zoomFactor *= 3;
+  }
+  var MIN_GLOBE_SHARE = 0.3;
+  function zoomOutLimit(fovy) {
+    var radius = Cesium.Ellipsoid.WGS84.maximumRadius;
+    var angular = Math.atan(MIN_GLOBE_SHARE * Math.tan(fovy / 2));
+    return radius / Math.sin(angular) - radius;
+  }
+  viewer.scene.preRender.addEventListener(function () {
+    var fovy = viewer.camera.frustum.fovy;
+    if (viewer.scene.mode !== Cesium.SceneMode.SCENE3D || !isFinite(fovy)) {
+      cameraController.maximumZoomDistance = Number.POSITIVE_INFINITY;
+      return;
+    }
+    var currentHeight = viewer.camera.positionCartographic
+      ? viewer.camera.positionCartographic.height
+      : 0;
+    cameraController.maximumZoomDistance = Math.max(zoomOutLimit(fovy), currentHeight);
+  });
+
   var credits = viewer.scene.frameState.creditDisplay;
   function addCredit(text, href) {
     credits.addStaticCredit(new Cesium.Credit(
