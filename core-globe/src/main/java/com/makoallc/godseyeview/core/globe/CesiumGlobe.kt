@@ -81,7 +81,8 @@ fun CesiumGlobe(
                 override fun shouldInterceptRequest(
                     view: WebView,
                     request: WebResourceRequest,
-                ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+                ): WebResourceResponse? =
+                    TerrainTileProxy.fetch(request.url) ?: assetLoader.shouldInterceptRequest(request.url)
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
