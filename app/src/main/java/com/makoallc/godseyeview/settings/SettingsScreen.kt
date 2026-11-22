@@ -14,6 +14,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -102,7 +106,7 @@ fun SettingsScreen(
             )
         }
         SettingsSection(title = stringResource(R.string.settings_token_title)) {
-            var tokenDraft by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+            var tokenDraft by remember { mutableStateOf("") }
             Text(
                 text = stringResource(
                     if (hasToken) R.string.settings_token_set else R.string.settings_token_none,
