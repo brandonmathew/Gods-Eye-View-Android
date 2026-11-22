@@ -141,6 +141,9 @@ private fun GlobeScreen() {
         }
     }
     val initialView = remember { store.load() ?: CameraViewState.FULL_EARTH }
+    /* Issue #35: the live camera state, for Share - the same reports
+       that persist the last view. */
+    var currentView by remember { mutableStateOf(initialView) }
     var basemap by remember { mutableStateOf(store.loadBasemap()) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -167,7 +170,10 @@ private fun GlobeScreen() {
             },
             initialQualityId = effectiveQuality.id,
             initialIonToken = initialToken,
-            onCameraChanged = { view -> store.save(view) },
+            onCameraChanged = { view ->
+                currentView = view
+                store.save(view)
+            },
             onBasemapChanged = { newBasemap ->
                 basemap = newBasemap
                 store.saveBasemap(newBasemap)
@@ -220,6 +226,40 @@ private fun GlobeScreen() {
                     }
                 },
                 myLocationLabel = stringResource(R.string.my_location_button),
+                onShare = {
+                    val lat = String.format(java.util.Locale.US, "%.5f", currentView.latitude)
+                    val lon = String.format(java.util.Locale.US, "%.5f", currentView.longitude)
+                    val height = String.format(
+                        java.util.Locale.US, "%,.0f", currentView.heightMeters,
+                    )
+                    val text = listOf(
+                        context.getString(R.string.share_header),
+                        "${context.getString(R.string.share_latitude)}: $lat",
+                        "${context.getString(R.string.share_longitude)}: $lon",
+                        "${context.getString(R.string.share_height)}: $height m",
+                        "${context.getString(R.string.share_basemap)}: " +
+                            context.getString(
+                                when (basemap) {
+                                    Basemap.OSM -> R.string.basemap_osm
+                                    Basemap.PHOTOREALISTIC -> R.string.basemap_photorealistic
+                                    Basemap.ESRI -> R.string.basemap_esri
+                                },
+                            ),
+                        "https://www.google.com/maps/search/?api=1&query=$lat,$lon",
+                    ).joinToString("\n")
+                    val sendIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, text)
+                        putExtra(
+                            android.content.Intent.EXTRA_SUBJECT,
+                            context.getString(R.string.share_subject),
+                        )
+                    }
+                    context.startActivity(
+                        android.content.Intent.createChooser(sendIntent, null),
+                    )
+                },
+                shareLabel = stringResource(R.string.share_button),
             )
             GlobeControlBar(
                 onResetGlobe = { controller.resetGlobe() },
