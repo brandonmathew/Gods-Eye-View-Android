@@ -36,6 +36,8 @@ fun GlobeControlBar(
     modifier: Modifier = Modifier,
     onGlobeStatus: (() -> Unit)? = null,
     statusLabel: String = "",
+    onSettings: (() -> Unit)? = null,
+    settingsLabel: String = "",
 ) {
     Row(
         modifier = modifier
@@ -48,6 +50,9 @@ fun GlobeControlBar(
         TextButton(onClick = onResetGlobe) { Text(resetLabel) }
         if (onGlobeStatus != null) {
             TextButton(onClick = onGlobeStatus) { Text(statusLabel) }
+        }
+        if (onSettings != null) {
+            TextButton(onClick = onSettings) { Text(settingsLabel) }
         }
     }
 }

@@ -61,6 +61,7 @@ private fun GlobeScreen() {
     var diagnostics by remember { mutableStateOf<String?>(null) }
     val consoleLines = remember { mutableListOf<String>() }
     var showDiagnostics by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CesiumGlobe(
@@ -99,8 +100,18 @@ private fun GlobeScreen() {
                 showDiagnostics = true
             },
             statusLabel = stringResource(R.string.globe_status),
+            onSettings = { showSettings = true },
+            settingsLabel = stringResource(R.string.settings_button),
             modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
         )
+        if (showSettings) {
+            com.makoallc.godseyeview.settings.SettingsScreen(
+                basemapLabel = stringResource(
+                    if (basemap == Basemap.OSM) R.string.basemap_osm else R.string.basemap_esri,
+                ),
+                onBack = { showSettings = false },
+            )
+        }
         if (showDiagnostics) {
             val reportText = buildString {
                 append(diagnostics ?: stringResource(R.string.diagnostics_none))
