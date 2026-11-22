@@ -56,3 +56,35 @@ fun GlobeControlBar(
         }
     }
 }
+
+/** Stage 3 action bar (search / location / share), same pill styling,
+ *  stacked above the main control bar so neither overflows on phones. */
+@Composable
+fun GlobeActionBar(
+    modifier: Modifier = Modifier,
+    onSearch: (() -> Unit)? = null,
+    searchLabel: String = "",
+    onMyLocation: (() -> Unit)? = null,
+    myLocationLabel: String = "",
+    onShare: (() -> Unit)? = null,
+    shareLabel: String = "",
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (onSearch != null) {
+            TextButton(onClick = onSearch) { Text(searchLabel) }
+        }
+        if (onMyLocation != null) {
+            TextButton(onClick = onMyLocation) { Text(myLocationLabel) }
+        }
+        if (onShare != null) {
+            TextButton(onClick = onShare) { Text(shareLabel) }
+        }
+    }
+}
