@@ -1,11 +1,11 @@
 'use strict';
 /* God's Eye View Android - core globe (Stage 1).
    Keyless basemap ladder (plan Q4): Esri World Imagery first, OSM if Esri
-   tiles keep failing. Terrain is the ellipsoid for Stage 1: the AWS
-   Terrain Tiles quantized-mesh dataset this page originally loaded no
-   longer exists (issue #12 - its layer.json 404s and the never-ready
-   provider silently blocked ALL globe rendering). A working terrain
-   source is Stage 2 work (issue #15). */
+   tiles keep failing. Terrain ladder (issue #15): Terrarium keyless by
+   default, Cesium World Terrain with a user ion token (issue #19). The
+   AWS quantized-mesh dataset is gone (issue #12), so every terrain swap
+   here is gated on a successful first tile and reverts to the ellipsoid
+   on repeated errors - terrain must never block the globe. */
 (function () {
   var bridge = window.AndroidBridge || {
     onGlobeReady: function () {}, onCameraChanged: function () {},
@@ -96,6 +96,69 @@
      diagnostics as a canary: it must remain 0 now that nothing swaps. */
   var terrainActive = 'ellipsoid';
   var terrainErrorCount = 0;
+
+  /* Terrarium terrain (issue #15, keyless default of the locked ladder).
+     The S3 bucket sends no CORS header, so tiles are fetched through the
+     app's own origin: the page requests terrain/{z}/{x}/{y}.png relative
+     to itself and CesiumGlobe's shouldInterceptRequest proxies the bytes
+     from S3 natively. Decode + provider shape were PROVEN in the desktop
+     repro before this integration (sampleTerrain at level 2: Everest
+     5122 m, mid-Pacific -4286 m). The swap follows the issue #12 rule:
+     assign only after a probe tile decodes through the real path, and
+     revert to the ellipsoid if the provider reports repeated errors -
+     a terrain failure must never block the globe. */
+  var terrainProbe = 'not run';
+  var TERRARIUM_MAX_LEVEL = 15;
+  function terrariumTileUrl(z, x, y) {
+    return 'terrain/' + z + '/' + x + '/' + y + '.png';
+  }
+  function decodeTerrariumTile(url) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = 256; canvas.height = 256;
+          var ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0);
+          var px = ctx.getImageData(0, 0, 256, 256).data;
+          var heights = new Float32Array(256 * 256);
+          for (var i = 0; i < 256 * 256; i++) {
+            heights[i] = px[i * 4] * 256 + px[i * 4 + 1] + px[i * 4 + 2] / 256 - 32768;
+          }
+          resolve(heights);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { reject(new Error('terrarium tile load failed: ' + url)); };
+      img.src = url;
+    });
+  }
+  function enableTerrarium() {
+    decodeTerrariumTile(terrariumTileUrl(2, 1, 1)).then(function () {
+      var provider = new Cesium.CustomHeightmapTerrainProvider({
+        width: 256,
+        height: 256,
+        tilingScheme: new Cesium.WebMercatorTilingScheme(),
+        callback: function (x, y, level) {
+          if (level > TERRARIUM_MAX_LEVEL) return undefined;
+          return decodeTerrariumTile(terrariumTileUrl(level, x, y));
+        }
+      });
+      provider.errorEvent.addEventListener(function () {
+        terrainErrorCount++;
+        if (terrainErrorCount >= 6 && terrainActive === 'terrarium') {
+          viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+          terrainActive = 'ellipsoid (terrarium failed, reverted)';
+        }
+      });
+      viewer.terrainProvider = provider;
+      terrainActive = 'terrarium';
+      terrainProbe = 'ok';
+      addCredit('Terrain: Terrarium © Mapzen, AWS Terrain Tiles', 'https://github.com/tilezen/joerd/blob/master/docs/attribution.md');
+    }).catch(function (e) {
+      terrainProbe = 'failed: ' + (e && e.message || e);
+    });
+  }
 
   function reportCamera() {
     var cam = viewer.camera;
@@ -235,6 +298,7 @@
     var surface = viewer.scene.globe._surface;
     return {
       quality: activeQuality,
+      terrainProbe: terrainProbe,
       basemap: currentBasemap,
       esriImageryErrors: esriErrorCount,
       terrainActive: terrainActive,
@@ -286,6 +350,7 @@
     reportDiagnostics: sendDiagnostics
   };
 
+  enableTerrarium();
   bridge.onGlobeReady();
   setTimeout(sendDiagnostics, 9000);
 })();
