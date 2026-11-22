@@ -11,7 +11,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -74,7 +78,10 @@ fun CesiumGlobe(
             }
         }
     }
-    val webView = remember {
+    // Stage 5 (issue #55): if the WebView renderer process dies, the view
+    // can never draw again - bump the generation to swap in a fresh one.
+    var webViewGeneration by remember { mutableStateOf(0) }
+    val webView = remember(webViewGeneration) {
         WebView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -90,6 +97,19 @@ fun CesiumGlobe(
                     request: WebResourceRequest,
                 ): WebResourceResponse? =
                     TerrainTileProxy.fetch(request.url) ?: assetLoader.shouldInterceptRequest(request.url)
+
+                override fun onRenderProcessGone(
+                    view: WebView,
+                    detail: android.webkit.RenderProcessGoneDetail,
+                ): Boolean {
+                    // The renderer died (OOM, crash). Detach the dead view
+                    // so controller calls queue up, report the error, and
+                    // recreate the WebView instead of a permanent blank.
+                    controller.detach(view)
+                    onGlobeError("WebView renderer process ended; reloading the globe")
+                    webViewGeneration++
+                    return true
+                }
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
@@ -111,5 +131,7 @@ fun CesiumGlobe(
             webView.destroy()
         }
     }
-    AndroidView(factory = { webView }, modifier = modifier)
+    key(webViewGeneration) {
+        AndroidView(factory = { webView }, modifier = modifier)
+    }
 }
