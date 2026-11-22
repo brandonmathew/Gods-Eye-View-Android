@@ -32,7 +32,7 @@ class CrashActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val report = intent.getStringExtra(EXTRA_REPORT_FILE)
             ?.let { path -> runCatching { File(path).readText() }.getOrNull() }
-            ?: stringResource(R.string.crash_no_report)
+            ?: getString(R.string.crash_no_report)
         setContent {
             GodsEyeTheme {
                 CrashScreen(
