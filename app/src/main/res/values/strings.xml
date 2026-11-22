@@ -95,6 +95,8 @@
     <string name="credit_osm_terms">Fallback basemap. © OpenStreetMap contributors, available under the Open Database License (ODbL). openstreetmap.org/copyright</string>
     <string name="credit_terrarium_name">Terrarium terrain (AWS Terrain Tiles)</string>
     <string name="credit_terrarium_terms">Default keyless terrain, Terrarium format by Mapzen/Tilezen. Elevation data from USGS, NOAA, GMTED and other sources listed in the Tilezen attribution doc: github.com/tilezen/joerd/blob/master/docs/attribution.md</string>
+    <string name="credit_geocoding_name">Place search — Photon and Nominatim</string>
+    <string name="credit_geocoding_terms">Keyless search results by Photon (Komoot) and Nominatim, built on OpenStreetMap data © OpenStreetMap contributors, available under the Open Database License (ODbL).</string>
     <string name="credit_app_name">God\'s Eye View Android</string>
     <string name="credit_app_terms">This app\'s own code is MIT licensed. Data sources keep their own terms, listed above.</string>
     <string name="settings_about_title">About</string>
