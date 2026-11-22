@@ -5,26 +5,55 @@ name: Beta release
 # 1.0.0-beta.1, 1.0.0-beta.2, ... The version is assigned here, never on
 # feature branches.
 on:
-  # Never build before CI passes: this workflow runs only after the CI
-  # workflow completes successfully for a commit on beta. A manual
-  # workflow_dispatch run is the only override, and it is deliberate.
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [beta]
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   beta:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
+      # Never build before CI passes. A workflow_run trigger cannot do
+      # this job here: GitHub only fires workflow_run from the workflow
+      # file on the default branch, and this file lives on beta (Refs #8).
+      # So the gate is the first step instead: wait for the CI run for
+      # this exact commit and refuse to build unless it succeeded.
+      - name: Gate — require CI success for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="$GITHUB_SHA"
+          echo "Waiting for CI result for commit $SHA..."
+          for i in $(seq 1 30); do
+            RUN_JSON=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow CI --limit 20 \
+              --json headSha,status,conclusion \
+              --jq "[.[] | select(.headSha == \"$SHA\")] | first // empty")
+            if [ -n "$RUN_JSON" ]; then
+              STATUS=$(echo "$RUN_JSON" | jq -r .status)
+              CONCLUSION=$(echo "$RUN_JSON" | jq -r .conclusion)
+              echo "CI run: status=$STATUS conclusion=$CONCLUSION"
+              if [ "$STATUS" = "completed" ]; then
+                if [ "$CONCLUSION" = "success" ]; then
+                  echo "CI passed for $SHA. Proceeding to build."
+                  exit 0
+                fi
+                echo "CI did not pass for $SHA (conclusion=$CONCLUSION). Refusing to build."
+                exit 1
+              fi
+            else
+              echo "No CI run for $SHA yet."
+            fi
+            sleep 30
+          done
+          echo "Timed out waiting for CI for $SHA. Refusing to build."
+          exit 1
+
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
       - name: Set up JDK 17
@@ -90,4 +119,4 @@ jobs:
             "GodsEyeView-$VERSION.apk" "GodsEyeView-$VERSION.apk.sha256" \
             --title "God's Eye View Android $VERSION" \
             --generate-notes --prerelease \
-            --target "${{ github.event.workflow_run.head_sha || github.sha }}"
+            --target "$GITHUB_SHA"
