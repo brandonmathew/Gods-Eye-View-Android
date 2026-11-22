@@ -24,6 +24,7 @@ import androidx.webkit.WebViewAssetLoader
 fun CesiumGlobe(
     controller: GlobeController,
     initialView: CameraViewState,
+    initialBasemap: Basemap = Basemap.ESRI,
     onCameraChanged: (CameraViewState) -> Unit,
     onBasemapChanged: (Basemap) -> Unit,
     onGlobeError: (String) -> Unit,
@@ -41,7 +42,7 @@ fun CesiumGlobe(
         object {
             @JavascriptInterface
             fun onGlobeReady() {
-                controller.onPageReady(initialView)
+                controller.onPageReady(initialView, initialBasemap)
             }
 
             @JavascriptInterface
