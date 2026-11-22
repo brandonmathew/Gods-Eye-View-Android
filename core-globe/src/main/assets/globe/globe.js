@@ -390,16 +390,22 @@
   /* Search support (issue #33): fly-to + a temporary pin. The pin is a
      plain Cesium entity - the layer system's real markers are Stage 4. */
   var searchPin = null;
+  /* Issue #42: fly with flyToBoundingSphere so the TARGET ends up at the
+     center of the screen. Plain camera.flyTo treats the destination as
+     the camera's own position - the camera ended up directly above the
+     target pitched at -55 degrees, leaving the target 35 degrees off
+     the view axis (off-center, at low heights off-screen). The range
+     converts the requested camera height to a slant distance at -55. */
   function flyTo(lon, lat, height) {
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(lon, lat, height),
-      orientation: {
-        heading: 0,
-        pitch: Cesium.Math.toRadians(-55),
-        roll: 0
-      },
-      duration: 2.2
-    });
+    var pitch = Cesium.Math.toRadians(-55);
+    var range = height / Math.sin(Cesium.Math.toRadians(55));
+    viewer.camera.flyToBoundingSphere(
+      new Cesium.BoundingSphere(Cesium.Cartesian3.fromDegrees(lon, lat, 0), 0),
+      {
+        offset: new Cesium.HeadingPitchRange(0, pitch, range),
+        duration: 2.2
+      }
+    );
   }
   function showPin(lon, lat, label) {
     clearPin();
