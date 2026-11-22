@@ -35,6 +35,10 @@ fun SettingsScreen(
     qualityMode: QualityMode = QualityMode.AUTO,
     onQualitySelected: (QualityMode) -> Unit = {},
     effectiveQualityLabel: String = "",
+    cacheSummary: String = "",
+    cacheLimitMb: Int = 250,
+    onCacheLimitSelected: (Int) -> Unit = {},
+    onClearCache: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -115,10 +119,26 @@ fun SettingsScreen(
             }
         }
         SettingsSection(title = stringResource(R.string.settings_cache_title)) {
+            if (cacheSummary.isNotEmpty()) {
+                Text(
+                    text = cacheSummary,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            listOf(100, 250, 500).forEach { limit ->
+                RadioOption(
+                    label = stringResource(R.string.settings_cache_limit_option, limit),
+                    selected = cacheLimitMb == limit,
+                    onSelect = { onCacheLimitSelected(limit) },
+                )
+            }
             Text(
-                text = stringResource(R.string.settings_cache_summary),
-                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.settings_cache_note),
+                style = MaterialTheme.typography.bodyMedium,
             )
+            androidx.compose.material3.Button(onClick = onClearCache) {
+                Text(text = stringResource(R.string.settings_cache_clear))
+            }
         }
         SettingsSection(title = stringResource(R.string.settings_credits_title)) {
             Text(

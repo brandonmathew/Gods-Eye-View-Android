@@ -50,6 +50,12 @@ class GlobeController {
     /** Issue #12 diagnostics: ask the page to send its current globe state. */
     fun reportDiagnostics() = eval("window.GEV && window.GEV.reportDiagnostics()")
 
+    /** Issue #20: drop the WebView HTTP cache (imagery tiles). */
+    fun clearTileCache() {
+        val view = webView ?: return
+        view.post { view.clearCache(true) }
+    }
+
     private fun eval(js: String) {
         val view = webView
         if (view == null || !ready) {
