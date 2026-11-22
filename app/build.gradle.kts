@@ -52,8 +52,6 @@ dependencies {
     implementation(project(":core-globe"))
     implementation(project(":core-ui"))
     implementation(project(":layer-api"))
-    // Stage 4 proof only (issue #47): removed again after confirmation.
-    implementation(project(":layer-sample"))
     implementation("androidx.core:core:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
