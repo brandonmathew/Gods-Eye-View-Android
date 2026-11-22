@@ -105,7 +105,8 @@ object PlaceSearch {
         for (i in 0 until array.length()) {
             val item = array.getJSONObject(i)
             val display = item.optString("display_name")
-            val name = display.substringBefore(",").ifEmpty { continue }
+            val name = display.substringBefore(",")
+            if (name.isEmpty()) continue
             val detail = display.substringAfter(",", "").trim()
             val bbox = item.optJSONArray("boundingbox")
             val height = if (bbox != null && bbox.length() == 4) {
