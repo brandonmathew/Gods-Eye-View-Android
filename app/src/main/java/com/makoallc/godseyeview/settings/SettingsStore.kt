@@ -36,10 +36,24 @@ class SettingsStore(context: Context) {
         prefs.edit().putInt(KEY_CACHE_LIMIT_MB, limitMb).apply()
     }
 
+    /** The user's update channel (plan Q23); null = not chosen, the
+     *  updater's default for this build applies. */
+    fun loadUpdateChannel(): com.makoallc.godseyeview.update.UpdateChannel? =
+        when (prefs.getString(KEY_UPDATE_CHANNEL, null)) {
+            "STABLE" -> com.makoallc.godseyeview.update.UpdateChannel.STABLE
+            "BETA" -> com.makoallc.godseyeview.update.UpdateChannel.BETA
+            else -> null
+        }
+
+    fun saveUpdateChannel(channel: com.makoallc.godseyeview.update.UpdateChannel) {
+        prefs.edit().putString(KEY_UPDATE_CHANNEL, channel.name).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "settings"
         const val KEY_QUALITY = "quality_mode"
         const val KEY_CACHE_LIMIT_MB = "cache_limit_mb"
+        const val KEY_UPDATE_CHANNEL = "update_channel"
         const val DEFAULT_CACHE_LIMIT_MB = 250
     }
 }

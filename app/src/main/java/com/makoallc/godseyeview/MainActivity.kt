@@ -168,6 +168,49 @@ private fun GlobeScreen() {
             controller = controller,
         )
     }
+    /* Stage 5 in-app updater (issue #54, plan Q23): silent check once per
+       launch; Settings can re-check manually, and switching the channel
+       re-checks immediately. */
+    val updateManager = remember {
+        com.makoallc.godseyeview.update.UpdateManager(context)
+    }
+    var updateChannel by remember {
+        mutableStateOf(
+            settingsStore.loadUpdateChannel() ?: updateManager.defaultChannel(),
+        )
+    }
+    var availableUpdate by remember {
+        mutableStateOf<com.makoallc.godseyeview.update.UpdateInfo?>(null)
+    }
+    var updateStatus by remember { mutableStateOf("") }
+    var downloadProgress by remember { mutableStateOf<Int?>(null) }
+    val updatesCheckingText = stringResource(R.string.updates_checking)
+    val updatesUpToDateText = stringResource(R.string.updates_up_to_date)
+    val updatesCheckFailedText = stringResource(R.string.updates_check_failed)
+    val updatesAvailableFormat = context.getString(R.string.updates_available)
+    val updatesDownloadFailedText = stringResource(R.string.updates_download_failed)
+    val updatesChecksumFailedText = stringResource(R.string.updates_checksum_failed)
+    fun runUpdateCheck(manual: Boolean) {
+        if (manual) updateStatus = updatesCheckingText
+        updateManager.check(
+            updateChannel,
+            onResult = { info ->
+                if (info != null) availableUpdate = info
+                if (manual) {
+                    updateStatus = if (info != null) {
+                        String.format(java.util.Locale.US, updatesAvailableFormat, info.version)
+                    } else {
+                        updatesUpToDateText
+                    }
+                }
+            },
+            onError = {
+                if (manual) updateStatus = updatesCheckFailedText
+            },
+        )
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) { runUpdateCheck(manual = false) }
+
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, layerManager) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -309,6 +352,62 @@ private fun GlobeScreen() {
                 settingsLabel = stringResource(R.string.settings_button),
             )
         }
+        availableUpdate?.let { info ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = {
+                    if (downloadProgress == null) availableUpdate = null
+                },
+                title = { Text(stringResource(R.string.updates_dialog_title)) },
+                text = {
+                    Text(
+                        if (downloadProgress != null) {
+                            stringResource(
+                                R.string.updates_downloading,
+                                downloadProgress ?: 0,
+                            )
+                        } else {
+                            stringResource(R.string.updates_dialog_body, info.version)
+                        },
+                    )
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        enabled = downloadProgress == null,
+                        onClick = {
+                            downloadProgress = 0
+                            updateManager.download(
+                                info,
+                                onProgress = { downloadProgress = it },
+                                onDone = { file ->
+                                    downloadProgress = null
+                                    availableUpdate = null
+                                    context.startActivity(updateManager.installIntent(file))
+                                },
+                                onError = { message ->
+                                    downloadProgress = null
+                                    availableUpdate = null
+                                    scope.launch {
+                                        snackbar.showSnackbar(
+                                            if (message == "checksum") {
+                                                updatesChecksumFailedText
+                                            } else {
+                                                updatesDownloadFailedText
+                                            },
+                                        )
+                                    }
+                                },
+                            )
+                        },
+                    ) { Text(stringResource(R.string.updates_download)) }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(
+                        enabled = downloadProgress == null,
+                        onClick = { availableUpdate = null },
+                    ) { Text(stringResource(R.string.updates_later)) }
+                },
+            )
+        }
         if (showLayers) {
             com.makoallc.godseyeview.layers.LayerPanel(
                 manager = layerManager,
@@ -374,6 +473,14 @@ private fun GlobeScreen() {
                     hasToken = false
                     controller.setIonToken(null)
                 },
+                updateChannel = updateChannel,
+                onUpdateChannelSelected = { selected ->
+                    updateChannel = selected
+                    settingsStore.saveUpdateChannel(selected)
+                    runUpdateCheck(manual = true)
+                },
+                updateStatus = updateStatus,
+                onCheckUpdates = { runUpdateCheck(manual = true) },
                 onOpenCredits = { showCredits = true },
                 effectiveQualityLabel = when (effectiveQuality) {
                     com.makoallc.godseyeview.settings.QualityMode.HIGH ->
