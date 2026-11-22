@@ -54,6 +54,18 @@ private fun GlobeScreen() {
     var qualityMode by remember {
         mutableStateOf(settingsStore.loadQualityMode())
     }
+    var cacheLimitMb by remember { mutableStateOf(settingsStore.loadCacheLimitMb()) }
+    var cacheSizeMb by remember {
+        mutableStateOf(com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context))
+    }
+    // Plan Q19 cap enforcement: over the limit at launch -> clear once.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (cacheSizeMb > cacheLimitMb) {
+            controller.clearTileCache()
+            com.makoallc.godseyeview.settings.CacheInfo.clear(context)
+            cacheSizeMb = com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context)
+        }
+    }
     val effectiveQuality = com.makoallc.godseyeview.settings.QualityResolver
         .effectiveMode(context, qualityMode)
     val controller = remember { GlobeController() }
@@ -131,6 +143,20 @@ private fun GlobeScreen() {
                         com.makoallc.godseyeview.settings.QualityResolver
                             .effectiveMode(context, selected).id,
                     )
+                },
+                cacheSummary = stringResource(
+                    R.string.settings_cache_size,
+                    String.format(java.util.Locale.US, "%.1f", cacheSizeMb),
+                ),
+                cacheLimitMb = cacheLimitMb,
+                onCacheLimitSelected = { limit ->
+                    cacheLimitMb = limit
+                    settingsStore.saveCacheLimitMb(limit)
+                },
+                onClearCache = {
+                    controller.clearTileCache()
+                    com.makoallc.godseyeview.settings.CacheInfo.clear(context)
+                    cacheSizeMb = com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context)
                 },
                 effectiveQualityLabel = when (effectiveQuality) {
                     com.makoallc.godseyeview.settings.QualityMode.HIGH ->

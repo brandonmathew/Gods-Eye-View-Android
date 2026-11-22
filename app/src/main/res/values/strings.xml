@@ -23,6 +23,10 @@
     <string name="settings_quality_effective">Currently rendering: %1$s</string>
     <string name="settings_cache_title">Tile cache</string>
     <string name="settings_cache_summary">Size limit and clear controls.</string>
+    <string name="settings_cache_size">Cache size: %1$s MB</string>
+    <string name="settings_cache_limit_option">Limit: %1$d MB</string>
+    <string name="settings_cache_note">If the cache is over the limit when the app starts, it is cleared automatically.</string>
+    <string name="settings_cache_clear">Clear cache now</string>
     <string name="settings_credits_title">Credits</string>
     <string name="settings_credits_summary">Every provider, dataset and library, with its terms.</string>
     <string name="settings_about_title">About</string>
