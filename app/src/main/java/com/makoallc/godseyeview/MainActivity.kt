@@ -1,13 +1,21 @@
 package com.makoallc.godseyeview
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +56,11 @@ private fun GlobeScreen() {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val globeErrorText = stringResource(R.string.globe_error)
+    // Issue #12 diagnostics: latest globe state JSON from the page plus the
+    // WebView console lines, shown by the Globe status button.
+    var diagnostics by remember { mutableStateOf<String?>(null) }
+    val consoleLines = remember { mutableListOf<String>() }
+    var showDiagnostics by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CesiumGlobe(
@@ -60,6 +73,11 @@ private fun GlobeScreen() {
             },
             onGlobeError = {
                 scope.launch { snackbar.showSnackbar(globeErrorText) }
+            },
+            onDiagnostics = { json -> diagnostics = json },
+            onConsoleMessage = { line ->
+                consoleLines.add(line)
+                if (consoleLines.size > 50) consoleLines.removeAt(0)
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -76,8 +94,44 @@ private fun GlobeScreen() {
         GlobeControlBar(
             onResetGlobe = { controller.resetGlobe() },
             resetLabel = stringResource(R.string.reset_globe),
+            onGlobeStatus = {
+                controller.reportDiagnostics()
+                showDiagnostics = true
+            },
+            statusLabel = stringResource(R.string.globe_status),
             modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
         )
+        if (showDiagnostics) {
+            val reportText = buildString {
+                append(diagnostics ?: stringResource(R.string.diagnostics_none))
+                if (consoleLines.isNotEmpty()) {
+                    append("\n\nWebView console:\n")
+                    append(consoleLines.joinToString("\n"))
+                }
+            }
+            AlertDialog(
+                onDismissRequest = { showDiagnostics = false },
+                title = { Text(stringResource(R.string.diagnostics_title)) },
+                text = {
+                    Text(
+                        text = reportText,
+                        modifier = Modifier.verticalScroll(rememberScrollState()),
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("globe status", reportText))
+                    }) { Text(stringResource(R.string.diagnostics_copy)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDiagnostics = false }) {
+                        Text(stringResource(R.string.diagnostics_close))
+                    }
+                },
+            )
+        }
         SnackbarHost(
             hostState = snackbar,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 72.dp),

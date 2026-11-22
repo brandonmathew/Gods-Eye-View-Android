@@ -2,7 +2,9 @@ package com.makoallc.godseyeview.core.globe
 
 import android.annotation.SuppressLint
 import android.view.ViewGroup
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -26,6 +28,8 @@ fun CesiumGlobe(
     onBasemapChanged: (Basemap) -> Unit,
     onGlobeError: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onDiagnostics: (String) -> Unit = {},
+    onConsoleMessage: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val assetLoader = remember {
@@ -54,6 +58,11 @@ fun CesiumGlobe(
             fun onError(message: String) {
                 onGlobeError(message)
             }
+
+            @JavascriptInterface
+            fun onDiagnostics(json: String) {
+                onDiagnostics(json)
+            }
         }
     }
     val webView = remember {
@@ -71,6 +80,14 @@ fun CesiumGlobe(
                     view: WebView,
                     request: WebResourceRequest,
                 ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                    onConsoleMessage(
+                        "${consoleMessage.messageLevel()}: ${consoleMessage.message()}",
+                    )
+                    return true
+                }
             }
             addJavascriptInterface(bridge, "AndroidBridge")
             controller.attach(this)
