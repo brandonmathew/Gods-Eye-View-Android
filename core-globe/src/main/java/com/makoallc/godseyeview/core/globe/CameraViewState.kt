@@ -47,7 +47,7 @@ data class CameraViewState(
 }
 
 enum class Basemap(val id: String) {
-    ESRI("esri"), OSM("osm");
+    ESRI("esri"), OSM("osm"), PHOTOREALISTIC("photorealistic");
 
     companion object {
         fun fromId(id: String?): Basemap = entries.firstOrNull { it.id == id } ?: ESRI

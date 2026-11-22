@@ -26,9 +26,14 @@ class GlobeController {
         initialView: CameraViewState,
         initialBasemap: Basemap = Basemap.ESRI,
         initialQualityId: String = "balanced",
+        initialIonToken: String? = null,
     ) {
         ready = true
         eval("window.GEV && window.GEV.setView(${initialView.toJson()})")
+        if (!initialIonToken.isNullOrEmpty()) {
+            // Token first: a saved photorealistic basemap needs it in place.
+            eval("window.GEV && window.GEV.setIonToken(${org.json.JSONObject.quote(initialIonToken)})")
+        }
         if (initialBasemap != Basemap.ESRI) {
             // The page boots on Esri; re-apply the saved choice so the globe
             // and the basemap chip agree from the first frame (issue #18).
@@ -46,6 +51,10 @@ class GlobeController {
 
     fun setQuality(effectiveModeId: String) =
         eval("window.GEV && window.GEV.setQuality('$effectiveModeId')")
+
+    /** Issue #19: hand the page the user's Cesium ion token (or clear it). */
+    fun setIonToken(token: String?) =
+        eval("window.GEV && window.GEV.setIonToken(${org.json.JSONObject.quote(token ?: "")})")
 
     /** Issue #12 diagnostics: ask the page to send its current globe state. */
     fun reportDiagnostics() = eval("window.GEV && window.GEV.reportDiagnostics()")

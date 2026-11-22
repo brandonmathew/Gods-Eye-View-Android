@@ -79,6 +79,19 @@
 
   function setBasemap(id) {
     if (id === currentBasemap) return;
+    if (id === 'photorealistic') {
+      if (!ionTokenSet) {
+        ionError = 'photorealistic selected without an ion token';
+        return;
+      }
+      baseLayer.show = false;
+      currentBasemap = 'photorealistic';
+      ensurePhotoTileset();
+      if (photoTileset) photoTileset.show = true;
+      return;
+    }
+    if (photoTileset) photoTileset.show = false;
+    baseLayer.show = true;
     var replacement = id === 'osm' ? makeOsmLayer() : makeEsriLayer();
     viewer.imageryLayers.add(replacement, 0);
     viewer.imageryLayers.remove(baseLayer, true);
@@ -299,6 +312,9 @@
     return {
       quality: activeQuality,
       terrainProbe: terrainProbe,
+      ionState: ionState,
+      ionError: ionError,
+      photoTileset: photoTilesetState,
       basemap: currentBasemap,
       esriImageryErrors: esriErrorCount,
       terrainActive: terrainActive,
@@ -347,8 +363,73 @@
     },
     setBasemap: setBasemap,
     setQuality: setQuality,
+    setIonToken: setIonToken,
     reportDiagnostics: sendDiagnostics
   };
+
+  /* Cesium ion (issue #19, plan Q14): the user's own token unlocks the
+     top of both ladders - Cesium World Terrain replaces Terrarium, and
+     Google Photorealistic 3D (ion asset 2275207) becomes a basemap.
+     Every swap follows the issue #12 rule: World Terrain is assigned
+     only after the provider loads AND a sample height comes back; any
+     failure leaves the keyless setup untouched and records ionError. */
+  var ionState = 'no token';
+  var ionError = '';
+  /* Our own flag: Cesium's defaultAccessToken falls back to a built-in
+     demo token when unset, so it cannot be used to tell whether the USER
+     provided a token. */
+  var ionTokenSet = false;
+  var photoTileset = null;
+  var photoTilesetState = 'not created';
+  function ensurePhotoTileset() {
+    if (photoTileset || photoTilesetState === 'loading') return;
+    photoTilesetState = 'loading';
+    Cesium.Cesium3DTileset.fromIonAssetId(2275207).then(function (tileset) {
+      photoTileset = tileset;
+      photoTilesetState = 'ready';
+      tileset.show = currentBasemap === 'photorealistic';
+      viewer.scene.primitives.add(tileset);
+    }).catch(function (e) {
+      photoTilesetState = 'failed';
+      ionError = 'photorealistic: ' + (e && e.message || e);
+    });
+  }
+  function setIonToken(token) {
+    if (!token) {
+      Cesium.Ion.defaultAccessToken = undefined;
+      ionTokenSet = false;
+      ionState = 'no token';
+      if (currentBasemap === 'photorealistic') {
+        setBasemap('esri');
+        bridge.onBasemapChanged('esri');
+      }
+      if (terrainActive === 'cesium world terrain') enableTerrarium();
+      return;
+    }
+    Cesium.Ion.defaultAccessToken = token;
+    ionTokenSet = true;
+    ionState = 'token set';
+    Cesium.CesiumTerrainProvider.fromIonAssetId(1).then(function (provider) {
+      var probe = [Cesium.Cartographic.fromDegrees(86.925, 27.9881)];
+      return Cesium.sampleTerrain(provider, 2, probe).then(function (sampled) {
+        if (typeof sampled[0].height !== 'number') {
+          throw new Error('world terrain sample returned no height');
+        }
+        provider.errorEvent.addEventListener(function () {
+          terrainErrorCount++;
+          if (terrainErrorCount >= 6 && terrainActive === 'cesium world terrain') {
+            terrainActive = 'ellipsoid (world terrain failed, reverted)';
+            viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+          }
+        });
+        viewer.terrainProvider = provider;
+        terrainActive = 'cesium world terrain';
+        addCredit('Cesium World Terrain', 'https://cesium.com/platform/cesium-ion/content/cesium-world-terrain/');
+      });
+    }).catch(function (e) {
+      ionError = 'world terrain: ' + (e && e.message || e);
+    });
+  }
 
   enableTerrarium();
   bridge.onGlobeReady();
