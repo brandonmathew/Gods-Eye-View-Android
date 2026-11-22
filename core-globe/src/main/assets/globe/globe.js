@@ -234,6 +234,7 @@
     var carto = Cesium.Cartographic.fromCartesian(cam.positionWC);
     var surface = viewer.scene.globe._surface;
     return {
+      quality: activeQuality,
       basemap: currentBasemap,
       esriImageryErrors: esriErrorCount,
       terrainActive: terrainActive,
@@ -258,12 +259,30 @@
     bridge.onDiagnostics(JSON.stringify(collectDiagnostics(), null, 1));
   }
 
+  /* Quality modes (plan Q20): Kotlin resolves Auto from device specs and
+     sends the effective mode; the page only applies render knobs.
+     resolutionScale is relative to the WebView's own pixel ratio. */
+  var activeQuality = 'balanced';
+  function setQuality(mode) {
+    var presets = {
+      high: { resolutionScale: 1.0, maximumScreenSpaceError: 1.5, tileCacheSize: 400 },
+      balanced: { resolutionScale: 0.75, maximumScreenSpaceError: 2.0, tileCacheSize: 200 },
+      battery_saver: { resolutionScale: 0.5, maximumScreenSpaceError: 3.0, tileCacheSize: 100 }
+    };
+    var preset = presets[mode] || presets.balanced;
+    activeQuality = presets[mode] ? mode : 'balanced';
+    viewer.resolutionScale = preset.resolutionScale;
+    viewer.scene.globe.maximumScreenSpaceError = preset.maximumScreenSpaceError;
+    viewer.scene.globe.tileCacheSize = preset.tileCacheSize;
+  }
+
   window.GEV = {
     setView: setView,
     resetGlobe: function () {
       setView({ longitude: 0, latitude: 18, height: 22000000, heading: 0, pitch: -90, roll: 0 });
     },
     setBasemap: setBasemap,
+    setQuality: setQuality,
     reportDiagnostics: sendDiagnostics
   };
 

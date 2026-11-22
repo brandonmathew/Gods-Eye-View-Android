@@ -32,6 +32,9 @@ fun SettingsScreen(
     basemap: com.makoallc.godseyeview.core.globe.Basemap =
         com.makoallc.godseyeview.core.globe.Basemap.ESRI,
     onBasemapSelected: (com.makoallc.godseyeview.core.globe.Basemap) -> Unit = {},
+    qualityMode: QualityMode = QualityMode.AUTO,
+    onQualitySelected: (QualityMode) -> Unit = {},
+    effectiveQualityLabel: String = "",
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -56,12 +59,12 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(12.dp))
         SettingsSection(title = stringResource(R.string.settings_basemap_title)) {
-            BasemapOption(
+            RadioOption(
                 label = stringResource(R.string.basemap_esri),
                 selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.ESRI,
                 onSelect = { onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.ESRI) },
             )
-            BasemapOption(
+            RadioOption(
                 label = stringResource(R.string.basemap_osm),
                 selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.OSM,
                 onSelect = { onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.OSM) },
@@ -84,10 +87,32 @@ fun SettingsScreen(
             )
         }
         SettingsSection(title = stringResource(R.string.settings_quality_title)) {
-            Text(
-                text = stringResource(R.string.settings_quality_auto),
-                style = MaterialTheme.typography.bodyLarge,
+            RadioOption(
+                label = stringResource(R.string.settings_quality_auto),
+                selected = qualityMode == QualityMode.AUTO,
+                onSelect = { onQualitySelected(QualityMode.AUTO) },
             )
+            RadioOption(
+                label = stringResource(R.string.settings_quality_high),
+                selected = qualityMode == QualityMode.HIGH,
+                onSelect = { onQualitySelected(QualityMode.HIGH) },
+            )
+            RadioOption(
+                label = stringResource(R.string.settings_quality_balanced),
+                selected = qualityMode == QualityMode.BALANCED,
+                onSelect = { onQualitySelected(QualityMode.BALANCED) },
+            )
+            RadioOption(
+                label = stringResource(R.string.settings_quality_battery),
+                selected = qualityMode == QualityMode.BATTERY_SAVER,
+                onSelect = { onQualitySelected(QualityMode.BATTERY_SAVER) },
+            )
+            if (effectiveQualityLabel.isNotEmpty()) {
+                Text(
+                    text = stringResource(R.string.settings_quality_effective, effectiveQualityLabel),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
         SettingsSection(title = stringResource(R.string.settings_cache_title)) {
             Text(
@@ -111,7 +136,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun BasemapOption(
+private fun RadioOption(
     label: String,
     selected: Boolean,
     onSelect: () -> Unit,
