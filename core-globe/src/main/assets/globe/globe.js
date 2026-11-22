@@ -150,6 +150,99 @@
     tilesQueued = queued;
   });
 
+  /* Issue #12 round-2 probes. The beta.2 report showed: imagery errors 0,
+     terrain active with only 2 tile errors, no JS errors, globe visible as
+     a black disk with an atmosphere rim. So the surface occludes but draws
+     black. These probes split the remaining causes: worker processing,
+     image loading, WebGL capabilities, and what a real rendered frame
+     actually contains (sampled inside postRender, not between frames). */
+  var probe = {
+    frame: 'not sampled yet',
+    workerBlob: 'pending',
+    workerModule: 'pending',
+    imageLoad: 'pending',
+    webgl: 'pending',
+    providersReady: 'pending'
+  };
+
+  (function probeWebgl() {
+    try {
+      var canvas = document.createElement('canvas');
+      var gl2 = canvas.getContext('webgl2');
+      var gl = gl2 || canvas.getContext('webgl');
+      if (!gl) { probe.webgl = 'NO WebGL context at all'; return; }
+      var dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      probe.webgl = {
+        version: gl2 ? 'WebGL2' : 'WebGL1 only',
+        renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+        maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE)
+      };
+    } catch (e) { probe.webgl = 'threw: ' + (e && e.message || e); }
+  })();
+
+  (function probeWorkers() {
+    try {
+      var blob = new Blob(['onmessage=function(e){postMessage("ok")}'], { type: 'text/javascript' });
+      var bw = new Worker(URL.createObjectURL(blob));
+      var done = false;
+      bw.onmessage = function () { done = true; probe.workerBlob = 'ok'; bw.terminate(); };
+      bw.onerror = function (e) { probe.workerBlob = 'error: ' + (e.message || 'unknown'); };
+      bw.postMessage('go');
+      setTimeout(function () { if (!done && probe.workerBlob === 'pending') probe.workerBlob = 'timeout (no reply in 3s)'; }, 3000);
+    } catch (e) { probe.workerBlob = 'threw: ' + (e && e.message || e); }
+    try {
+      var mw = new Worker(window.CESIUM_BASE_URL + 'Workers/createVerticesFromHeightmap.js', { type: 'module' });
+      var settled = false;
+      mw.onerror = function (e) { settled = true; probe.workerModule = 'error: ' + (e.message || 'unknown'); mw.terminate(); };
+      setTimeout(function () {
+        if (!settled) { probe.workerModule = 'loaded, no error in 3s (treated as ok)'; mw.terminate(); }
+      }, 3000);
+    } catch (e) { probe.workerModule = 'threw: ' + (e && e.message || e); }
+  })();
+
+  (function probeImage() {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    var done = false;
+    img.onload = function () { done = true; probe.imageLoad = 'ok (' + img.naturalWidth + 'x' + img.naturalHeight + ')'; };
+    img.onerror = function () { probe.imageLoad = 'ERROR loading Esri tile z2'; };
+    img.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/1';
+    setTimeout(function () { if (!done && probe.imageLoad === 'pending') probe.imageLoad = 'timeout (no load in 5s)'; }, 5000);
+  })();
+
+  var frameCount = 0;
+  viewer.scene.postRender.addEventListener(function () {
+    frameCount++;
+    if (frameCount % 30 !== 0) return;
+    try {
+      var surface = viewer.scene.globe._surface;
+      var gl = viewer.scene.context._gl;
+      var w = viewer.canvas.width, h = viewer.canvas.height;
+      var pts = [];
+      for (var gy = 1; gy <= 5; gy++) for (var gx = 1; gx <= 5; gx++) {
+        pts.push([Math.floor(w * gx / 6), Math.floor(h * gy / 6)]);
+      }
+      var dark = 0, total = 0;
+      var one = new Uint8Array(4);
+      pts.forEach(function (p) {
+        gl.readPixels(p[0], p[1], 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, one);
+        total++;
+        if (one[0] < 12 && one[1] < 12 && one[2] < 12) dark++;
+      });
+      probe.frame = {
+        tilesToRenderInFrame: surface && surface._tilesToRender ? surface._tilesToRender.length : -1,
+        darkPixelsOf25: dark,
+        frame: frameCount
+      };
+      probe.providersReady = {
+        imagery: baseLayer.imageryProvider ? !!baseLayer.imageryProvider.ready : 'no provider',
+        terrain: viewer.terrainProvider ? !!viewer.terrainProvider.ready : 'no provider'
+      };
+    } catch (e) {
+      probe.frame = 'sampling threw: ' + (e && e.message || e);
+    }
+  });
+
   /* Issue #12 diagnostics: the actual globe state, so a phone report
      carries values instead of guesses. Sent once 6s after ready (after
      the terrain swap has had its chance) and on demand from the app. */
@@ -169,6 +262,12 @@
       cameraLat: carto ? +Cesium.Math.toDegrees(carto.latitude).toFixed(4) : null,
       globeShow: viewer.scene.globe.show,
       canvasPixels: viewer.canvas.width + 'x' + viewer.canvas.height,
+      probeFrame: probe.frame,
+      probeWorkerBlob: probe.workerBlob,
+      probeWorkerModuleCesium: probe.workerModule,
+      probeImageLoad: probe.imageLoad,
+      probeWebgl: probe.webgl,
+      probeProvidersReady: probe.providersReady,
       jsErrors: jsErrors
     };
   }
@@ -186,5 +285,5 @@
   };
 
   bridge.onGlobeReady();
-  setTimeout(sendDiagnostics, 6000);
+  setTimeout(sendDiagnostics, 9000);
 })();
