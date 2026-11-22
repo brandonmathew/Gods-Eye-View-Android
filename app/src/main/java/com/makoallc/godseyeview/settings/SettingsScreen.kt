@@ -46,6 +46,11 @@ fun SettingsScreen(
     hasToken: Boolean = false,
     onSaveToken: (String) -> Unit = {},
     onClearToken: () -> Unit = {},
+    updateChannel: com.makoallc.godseyeview.update.UpdateChannel =
+        com.makoallc.godseyeview.update.UpdateChannel.BETA,
+    onUpdateChannelSelected: (com.makoallc.godseyeview.update.UpdateChannel) -> Unit = {},
+    updateStatus: String = "",
+    onCheckUpdates: () -> Unit = {},
     onOpenCredits: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -189,6 +194,41 @@ fun SettingsScreen(
             )
             androidx.compose.material3.Button(onClick = onClearCache) {
                 Text(text = stringResource(R.string.settings_cache_clear))
+            }
+        }
+        SettingsSection(title = stringResource(R.string.updates_title)) {
+            Text(
+                text = stringResource(R.string.updates_channel_label),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            RadioOption(
+                label = stringResource(R.string.updates_channel_stable),
+                selected = updateChannel ==
+                    com.makoallc.godseyeview.update.UpdateChannel.STABLE,
+                onSelect = {
+                    onUpdateChannelSelected(
+                        com.makoallc.godseyeview.update.UpdateChannel.STABLE,
+                    )
+                },
+            )
+            RadioOption(
+                label = stringResource(R.string.updates_channel_beta),
+                selected = updateChannel ==
+                    com.makoallc.godseyeview.update.UpdateChannel.BETA,
+                onSelect = {
+                    onUpdateChannelSelected(
+                        com.makoallc.godseyeview.update.UpdateChannel.BETA,
+                    )
+                },
+            )
+            androidx.compose.material3.Button(onClick = onCheckUpdates) {
+                Text(text = stringResource(R.string.updates_check))
+            }
+            if (updateStatus.isNotEmpty()) {
+                Text(
+                    text = updateStatus,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
         SettingsSection(title = stringResource(R.string.settings_credits_title)) {
