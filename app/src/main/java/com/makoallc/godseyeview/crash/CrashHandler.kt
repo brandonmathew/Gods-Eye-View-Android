@@ -40,8 +40,19 @@ object CrashHandler : Thread.UncaughtExceptionHandler {
 
     internal fun buildReport(thread: Thread, throwable: Throwable): String {
         val trace = StringWriter().also { throwable.printStackTrace(PrintWriter(it)) }
+        // Stage 5 (issue #55): the facts a diagnosis needs up front.
+        val version = runCatching {
+            val info = app.packageManager.getPackageInfo(app.packageName, 0)
+            "${info.versionName} (${info.longVersionCode})"
+        }.getOrNull() ?: "?"
         return buildString {
             appendLine("God's Eye View Android - crash report")
+            appendLine("App version: $version")
+            appendLine(
+                "Android: ${android.os.Build.VERSION.RELEASE} " +
+                    "(API ${android.os.Build.VERSION.SDK_INT})",
+            )
+            appendLine("Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
             appendLine("Thread: ${thread.name}")
             appendLine("Time: ${java.util.Date()}")
             appendLine()
