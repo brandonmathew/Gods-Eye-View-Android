@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -157,6 +158,31 @@ private fun GlobeScreen() {
     var showCredits by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
 
+    /* Stage 4 (issues #45/#47): the layer registry + fetch manager. Layer
+       modules register here at startup; with none registered the manager
+       simply idles and the Layers panel shows its empty state. */
+    val layerManager = remember {
+        com.makoallc.godseyeview.layers.LayerManager(
+            registry = com.makoallc.godseyeview.layerapi.LayerRegistry(),
+            controller = controller,
+        )
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, layerManager) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> layerManager.setPaused(true)
+                androidx.lifecycle.Lifecycle.Event.ON_START -> layerManager.setPaused(false)
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            layerManager.shutdown()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         CesiumGlobe(
             controller = controller,
@@ -185,6 +211,9 @@ private fun GlobeScreen() {
             onConsoleMessage = { line ->
                 consoleLines.add(line)
                 if (consoleLines.size > 50) consoleLines.removeAt(0)
+            },
+            onEntityPicked = { layerId, entityId ->
+                layerManager.onPicked(layerId, entityId)
             },
             modifier = Modifier.fillMaxSize(),
         )
