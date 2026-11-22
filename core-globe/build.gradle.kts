@@ -18,6 +18,7 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
+    implementation(project(":layer-api"))
     implementation("androidx.webkit:webkit:1.11.0")
     implementation("androidx.core:core:1.13.1")
     testImplementation("junit:junit:4.13.2")
