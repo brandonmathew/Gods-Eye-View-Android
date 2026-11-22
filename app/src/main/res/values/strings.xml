@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Plan Q31: English only, every string in resources. -->
 <resources>
-    <string name="app_name">God's Eye View</string>
+    <string name="app_name">God\'s Eye View</string>
     <string name="reset_globe">Reset Globe</string>
     <string name="basemap_esri">Esri Satellite</string>
     <string name="basemap_osm">OpenStreetMap</string>
