@@ -26,6 +26,7 @@ fun CesiumGlobe(
     initialView: CameraViewState,
     initialBasemap: Basemap = Basemap.ESRI,
     initialQualityId: String = "balanced",
+    initialIonToken: String? = null,
     onCameraChanged: (CameraViewState) -> Unit,
     onBasemapChanged: (Basemap) -> Unit,
     onGlobeError: (String) -> Unit,
@@ -43,7 +44,7 @@ fun CesiumGlobe(
         object {
             @JavascriptInterface
             fun onGlobeReady() {
-                controller.onPageReady(initialView, initialBasemap, initialQualityId)
+                controller.onPageReady(initialView, initialBasemap, initialQualityId, initialIonToken)
             }
 
             @JavascriptInterface

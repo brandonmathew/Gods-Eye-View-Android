@@ -14,6 +14,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +43,9 @@ fun SettingsScreen(
     cacheLimitMb: Int = 250,
     onCacheLimitSelected: (Int) -> Unit = {},
     onClearCache: () -> Unit = {},
+    hasToken: Boolean = false,
+    onSaveToken: (String) -> Unit = {},
+    onClearToken: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -78,6 +85,15 @@ fun SettingsScreen(
                 selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.OSM,
                 onSelect = { onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.OSM) },
             )
+            if (hasToken) {
+                RadioOption(
+                    label = stringResource(R.string.basemap_photorealistic),
+                    selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.PHOTOREALISTIC,
+                    onSelect = {
+                        onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.PHOTOREALISTIC)
+                    },
+                )
+            }
             Text(
                 text = stringResource(R.string.settings_basemap_note),
                 style = MaterialTheme.typography.bodyMedium,
@@ -90,9 +106,38 @@ fun SettingsScreen(
             )
         }
         SettingsSection(title = stringResource(R.string.settings_token_title)) {
+            var tokenDraft by remember { mutableStateOf("") }
             Text(
-                text = stringResource(R.string.settings_token_none),
+                text = stringResource(
+                    if (hasToken) R.string.settings_token_set else R.string.settings_token_none,
+                ),
                 style = MaterialTheme.typography.bodyLarge,
+            )
+            androidx.compose.material3.OutlinedTextField(
+                value = tokenDraft,
+                onValueChange = { tokenDraft = it },
+                label = { Text(stringResource(R.string.settings_token_field_label)) },
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        onSaveToken(tokenDraft.trim())
+                        tokenDraft = ""
+                    },
+                    enabled = tokenDraft.isNotBlank(),
+                ) { Text(stringResource(R.string.settings_token_save)) }
+                if (hasToken) {
+                    androidx.compose.material3.TextButton(onClick = onClearToken) {
+                        Text(stringResource(R.string.settings_token_clear))
+                    }
+                }
+            }
+            Text(
+                text = stringResource(R.string.settings_token_note),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
         SettingsSection(title = stringResource(R.string.settings_quality_title)) {

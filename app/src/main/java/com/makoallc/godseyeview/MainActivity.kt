@@ -51,6 +51,9 @@ private fun GlobeScreen() {
     val context = LocalContext.current
     val store = remember { LastViewStore(context) }
     val settingsStore = remember { com.makoallc.godseyeview.settings.SettingsStore(context) }
+    val tokenStore = remember { com.makoallc.godseyeview.settings.TokenStore(context) }
+    var hasToken by remember { mutableStateOf(tokenStore.hasToken()) }
+    val initialToken = remember { tokenStore.loadToken() }
     var qualityMode by remember {
         mutableStateOf(settingsStore.loadQualityMode())
     }
@@ -85,8 +88,15 @@ private fun GlobeScreen() {
         CesiumGlobe(
             controller = controller,
             initialView = initialView,
-            initialBasemap = basemap,
+            // A saved photorealistic basemap without a token cannot load;
+            // boot on Esri instead of leaving chip and globe disagreeing.
+            initialBasemap = if (basemap == Basemap.PHOTOREALISTIC && initialToken == null) {
+                Basemap.ESRI
+            } else {
+                basemap
+            },
             initialQualityId = effectiveQuality.id,
+            initialIonToken = initialToken,
             onCameraChanged = { view -> store.save(view) },
             onBasemapChanged = { newBasemap ->
                 basemap = newBasemap
@@ -108,7 +118,11 @@ private fun GlobeScreen() {
         )
         GlobeChip(
             text = stringResource(
-                if (basemap == Basemap.OSM) R.string.basemap_osm else R.string.basemap_esri,
+                when (basemap) {
+                    Basemap.OSM -> R.string.basemap_osm
+                    Basemap.PHOTOREALISTIC -> R.string.basemap_photorealistic
+                    Basemap.ESRI -> R.string.basemap_esri
+                },
             ),
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
         )
@@ -127,7 +141,11 @@ private fun GlobeScreen() {
         if (showSettings) {
             com.makoallc.godseyeview.settings.SettingsScreen(
                 basemapLabel = stringResource(
-                    if (basemap == Basemap.OSM) R.string.basemap_osm else R.string.basemap_esri,
+                    when (basemap) {
+                        Basemap.OSM -> R.string.basemap_osm
+                        Basemap.PHOTOREALISTIC -> R.string.basemap_photorealistic
+                        Basemap.ESRI -> R.string.basemap_esri
+                    },
                 ),
                 basemap = basemap,
                 onBasemapSelected = { selected ->
@@ -157,6 +175,17 @@ private fun GlobeScreen() {
                     controller.clearTileCache()
                     com.makoallc.godseyeview.settings.CacheInfo.clear(context)
                     cacheSizeMb = com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context)
+                },
+                hasToken = hasToken,
+                onSaveToken = { token ->
+                    tokenStore.saveToken(token)
+                    hasToken = true
+                    controller.setIonToken(token)
+                },
+                onClearToken = {
+                    tokenStore.clearToken()
+                    hasToken = false
+                    controller.setIonToken(null)
                 },
                 effectiveQualityLabel = when (effectiveQuality) {
                     com.makoallc.godseyeview.settings.QualityMode.HIGH ->
