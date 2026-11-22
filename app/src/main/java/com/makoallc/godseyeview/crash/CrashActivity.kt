@@ -63,6 +63,12 @@ private fun CrashScreen(
     onRestart: () -> Unit,
     onClose: () -> Unit,
 ) {
+    // Surface provides the theme's content color; a bare Column leaves
+    // Text at the default (black) - issue #27.
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = Modifier.fillMaxSize(),
+    ) {
     Column(
         modifier = Modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -78,5 +84,6 @@ private fun CrashScreen(
             Button(onClick = onRestart) { Text(stringResource(R.string.crash_restart)) }
             TextButton(onClick = onClose) { Text(stringResource(R.string.crash_close)) }
         }
+    }
     }
 }

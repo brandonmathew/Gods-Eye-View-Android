@@ -46,10 +46,15 @@ fun SettingsScreen(
     val versionName = runCatching {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName
     }.getOrNull() ?: "?"
+    // Surface provides the theme's content color; a bare Column with a
+    // .background() leaves Text at the default (black) - issue #27.
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize(),
+    ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
     ) {
@@ -152,6 +157,7 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+    }
     }
 }
 
