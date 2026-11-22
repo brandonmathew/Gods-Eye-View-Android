@@ -46,6 +46,7 @@ fun SettingsScreen(
     hasToken: Boolean = false,
     onSaveToken: (String) -> Unit = {},
     onClearToken: () -> Unit = {},
+    onOpenCredits: () -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -195,6 +196,9 @@ fun SettingsScreen(
                 text = stringResource(R.string.settings_credits_summary),
                 style = MaterialTheme.typography.bodyLarge,
             )
+            androidx.compose.material3.Button(onClick = onOpenCredits) {
+                Text(text = stringResource(R.string.settings_credits_view))
+            }
         }
         SettingsSection(title = stringResource(R.string.settings_about_title)) {
             Text(
