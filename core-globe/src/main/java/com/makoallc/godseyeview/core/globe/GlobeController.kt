@@ -56,6 +56,22 @@ class GlobeController {
     fun setIonToken(token: String?) =
         eval("window.GEV && window.GEV.setIonToken(${org.json.JSONObject.quote(token ?: "")})")
 
+    /** Issue #33: search fly-to + temporary pin. */
+    fun flyTo(longitude: Double, latitude: Double, heightMeters: Double) =
+        eval(
+            "window.GEV && window.GEV.flyTo(" +
+                "${fmt(longitude)}, ${fmt(latitude)}, ${fmt(heightMeters)})",
+        )
+
+    fun showPin(longitude: Double, latitude: Double, label: String) =
+        eval(
+            "window.GEV && window.GEV.showPin(" +
+                "${fmt(longitude)}, ${fmt(latitude)}, ${org.json.JSONObject.quote(label)})",
+        )
+
+    private fun fmt(value: Double): String =
+        String.format(java.util.Locale.US, "%.6f", value)
+
     /** Issue #12 diagnostics: ask the page to send its current globe state. */
     fun reportDiagnostics() = eval("window.GEV && window.GEV.reportDiagnostics()")
 

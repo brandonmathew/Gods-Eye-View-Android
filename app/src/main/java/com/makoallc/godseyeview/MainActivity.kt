@@ -6,7 +6,9 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -102,6 +104,7 @@ private fun GlobeScreen() {
     var showDiagnostics by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showCredits by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CesiumGlobe(
@@ -145,18 +148,37 @@ private fun GlobeScreen() {
             ),
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
         )
-        GlobeControlBar(
-            onResetGlobe = { controller.resetGlobe() },
-            resetLabel = stringResource(R.string.reset_globe),
-            onGlobeStatus = {
-                controller.reportDiagnostics()
-                showDiagnostics = true
-            },
-            statusLabel = stringResource(R.string.globe_status),
-            onSettings = { showSettings = true },
-            settingsLabel = stringResource(R.string.settings_button),
+        Column(
             modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            com.makoallc.godseyeview.core.ui.GlobeActionBar(
+                onSearch = { showSearch = true },
+                searchLabel = stringResource(R.string.search_button),
+            )
+            GlobeControlBar(
+                onResetGlobe = { controller.resetGlobe() },
+                resetLabel = stringResource(R.string.reset_globe),
+                onGlobeStatus = {
+                    controller.reportDiagnostics()
+                    showDiagnostics = true
+                },
+                statusLabel = stringResource(R.string.globe_status),
+                onSettings = { showSettings = true },
+                settingsLabel = stringResource(R.string.settings_button),
+            )
+        }
+        if (showSearch) {
+            com.makoallc.godseyeview.search.SearchScreen(
+                onResultSelected = { result ->
+                    controller.flyTo(result.longitude, result.latitude, result.heightMeters)
+                    controller.showPin(result.longitude, result.latitude, result.name)
+                    showSearch = false
+                },
+                onBack = { showSearch = false },
+            )
+        }
         if (showSettings) {
             com.makoallc.godseyeview.settings.SettingsScreen(
                 basemapLabel = stringResource(

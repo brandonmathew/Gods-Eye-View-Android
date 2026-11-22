@@ -356,11 +356,59 @@
     viewer.scene.globe.tileCacheSize = preset.tileCacheSize;
   }
 
+  /* Search support (issue #33): fly-to + a temporary pin. The pin is a
+     plain Cesium entity - the layer system's real markers are Stage 4. */
+  var searchPin = null;
+  function flyTo(lon, lat, height) {
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, height),
+      orientation: {
+        heading: 0,
+        pitch: Cesium.Math.toRadians(-55),
+        roll: 0
+      },
+      duration: 2.2
+    });
+  }
+  function showPin(lon, lat, label) {
+    clearPin();
+    searchPin = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(lon, lat),
+      point: {
+        pixelSize: 12,
+        color: Cesium.Color.fromCssColorString('#7FD4FF'),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      },
+      label: {
+        text: label,
+        font: '14px sans-serif',
+        fillColor: Cesium.Color.WHITE,
+        outlineColor: Cesium.Color.BLACK,
+        outlineWidth: 2,
+        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset: new Cesium.Cartesian2(0, -22),
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      }
+    });
+  }
+  function clearPin() {
+    if (searchPin) {
+      viewer.entities.remove(searchPin);
+      searchPin = null;
+    }
+  }
+
   window.GEV = {
     setView: setView,
     resetGlobe: function () {
+      clearPin();
       setView({ longitude: 0, latitude: 18, height: 22000000, heading: 0, pitch: -90, roll: 0 });
     },
+    flyTo: flyTo,
+    showPin: showPin,
+    clearPin: clearPin,
     setBasemap: setBasemap,
     setQuality: setQuality,
     setIonToken: setIonToken,
