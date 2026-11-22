@@ -76,6 +76,63 @@ class GlobeController {
                 "${fmt(longitude)}, ${fmt(latitude)})",
         )
 
+    /** Issue #44: draw a layer's current drawables (layer-api v1
+     *  primitives), replacing whatever the layer drew before. */
+    fun renderLayer(layerId: String, drawables: List<com.makoallc.godseyeview.layerapi.Drawable>) {
+        val array = org.json.JSONArray()
+        for (drawable in drawables) array.put(drawableJson(drawable))
+        eval(
+            "window.GEV && window.GEV.renderLayer(" +
+                "${org.json.JSONObject.quote(layerId)}, $array)",
+        )
+    }
+
+    fun clearLayer(layerId: String) =
+        eval("window.GEV && window.GEV.clearLayer(${org.json.JSONObject.quote(layerId)})")
+
+    /** Issue #44/#46: follow a layer entity with the camera (or stop). */
+    fun setFollow(layerId: String, entityId: String?) =
+        eval(
+            "window.GEV && window.GEV.setFollow(" +
+                (entityId?.let { org.json.JSONObject.quote("$layerId:$it") } ?: "null") +
+                ")",
+        )
+
+    private fun drawableJson(
+        drawable: com.makoallc.godseyeview.layerapi.Drawable,
+    ): org.json.JSONObject {
+        fun pointJson(p: com.makoallc.godseyeview.layerapi.GeoPoint) =
+            org.json.JSONObject()
+                .put("latitude", p.latitude)
+                .put("longitude", p.longitude)
+                .put("altitude", p.altitude)
+        fun pointsJson(points: List<com.makoallc.godseyeview.layerapi.GeoPoint>) =
+            org.json.JSONArray().also { arr -> points.forEach { arr.put(pointJson(it)) } }
+        return when (drawable) {
+            is com.makoallc.godseyeview.layerapi.MapPoint -> org.json.JSONObject()
+                .put("type", "point")
+                .put(
+                    "entity",
+                    org.json.JSONObject()
+                        .put("id", drawable.entity.id)
+                        .put("title", drawable.entity.title)
+                        .put("position", pointJson(drawable.entity.position)),
+                )
+            is com.makoallc.godseyeview.layerapi.Track -> org.json.JSONObject()
+                .put("type", "track")
+                .put("entityId", drawable.entityId)
+                .put("points", pointsJson(drawable.points))
+            is com.makoallc.godseyeview.layerapi.PolygonRegion -> org.json.JSONObject()
+                .put("type", "polygon")
+                .put("entityId", drawable.entityId)
+                .put("vertices", pointsJson(drawable.vertices))
+            is com.makoallc.godseyeview.layerapi.MapLabel -> org.json.JSONObject()
+                .put("type", "label")
+                .put("text", drawable.text)
+                .put("position", pointJson(drawable.position))
+        }
+    }
+
     private fun fmt(value: Double): String =
         String.format(java.util.Locale.US, "%.6f", value)
 

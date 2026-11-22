@@ -10,7 +10,7 @@
   var bridge = window.AndroidBridge || {
     onGlobeReady: function () {}, onCameraChanged: function () {},
     onBasemapChanged: function () {}, onError: function () {},
-    onDiagnostics: function () {}
+    onDiagnostics: function () {}, onEntityPicked: function () {}
   };
 
   /* Issue #12 diagnostics: every JS error is forwarded to the app instead
@@ -454,12 +454,123 @@
     });
   }
 
+  /* Layer rendering (issue #44): drawables arrive as JSON from the core.
+     Entity ids are namespaced "layerId:entityId" so tap picking can route
+     back to the owning layer. The search pin and location dot keep their
+     own non-namespaced entities and are never layer picks. */
+  var layerEntityIds = {}; // layerId -> [cesium entity id]
+  function layerPointColor() { return Cesium.Color.fromCssColorString('#FFD166'); }
+  function layerLineColor() { return Cesium.Color.fromCssColorString('#7FD4FF'); }
+  function labelStyle(text, dy) {
+    return {
+      text: text, font: '13px sans-serif',
+      fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK,
+      outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      pixelOffset: new Cesium.Cartesian2(0, dy),
+      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+    };
+  }
+  function renderLayer(layerId, drawables) {
+    /* Follow survives a refresh: remember the tracked entity id, untrack
+       before its entity is replaced, re-track the new one after. */
+    var trackedId = viewer.trackedEntity ? viewer.trackedEntity.id : null;
+    clearLayer(layerId);
+    var ids = [];
+    drawables.forEach(function (d, index) {
+      var ent = null;
+      if (d.type === 'point') {
+        ent = viewer.entities.add({
+          id: layerId + ':' + d.entity.id,
+          position: Cesium.Cartesian3.fromDegrees(
+            d.entity.position.longitude, d.entity.position.latitude,
+            d.entity.position.altitude || 0),
+          point: {
+            pixelSize: 11, color: layerPointColor(),
+            outlineColor: Cesium.Color.WHITE, outlineWidth: 2,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+          },
+          label: labelStyle(d.entity.title, -20)
+        });
+      } else if (d.type === 'track') {
+        ent = viewer.entities.add({
+          id: layerId + ':' + d.entityId + ':track',
+          polyline: {
+            positions: d.points.map(function (p) {
+              return Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, p.altitude || 0);
+            }),
+            width: 3, material: layerLineColor()
+          }
+        });
+      } else if (d.type === 'polygon') {
+        ent = viewer.entities.add({
+          id: layerId + ':' + d.entityId + ':polygon',
+          polygon: {
+            hierarchy: new Cesium.PolygonHierarchy(d.vertices.map(function (p) {
+              return Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, p.altitude || 0);
+            })),
+            material: layerLineColor().withAlpha(0.25),
+            outline: true, outlineColor: layerLineColor()
+          }
+        });
+      } else if (d.type === 'label') {
+        ent = viewer.entities.add({
+          id: layerId + ':label:' + index,
+          position: Cesium.Cartesian3.fromDegrees(
+            d.position.longitude, d.position.latitude, d.position.altitude || 0),
+          label: labelStyle(d.text, 0)
+        });
+      }
+      if (ent) ids.push(ent.id);
+    });
+    layerEntityIds[layerId] = ids;
+    if (trackedId && ids.indexOf(trackedId) >= 0) {
+      viewer.trackedEntity = viewer.entities.getById(trackedId);
+    }
+  }
+  function clearLayer(layerId) {
+    var ids = layerEntityIds[layerId] || [];
+    if (viewer.trackedEntity && ids.indexOf(viewer.trackedEntity.id) >= 0) {
+      viewer.trackedEntity = undefined;
+    }
+    ids.forEach(function (id) {
+      var ent = viewer.entities.getById(id);
+      if (ent) viewer.entities.remove(ent);
+    });
+    delete layerEntityIds[layerId];
+  }
+  function setFollow(fullEntityId) {
+    if (!fullEntityId) {
+      viewer.trackedEntity = undefined;
+      return;
+    }
+    var ent = viewer.entities.getById(fullEntityId);
+    if (ent) viewer.trackedEntity = ent;
+  }
+
+  /* Tap picking (issue #44): a picked layer entity reports its layer +
+     entity id; anything else (globe, pin, dot) reports a deselect. */
+  var pickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+  pickHandler.setInputAction(function (movement) {
+    var picked = viewer.scene.pick(movement.position);
+    var id = picked && picked.id && picked.id.id;
+    if (typeof id === 'string' && id.indexOf(':') > 0) {
+      var sep = id.indexOf(':');
+      bridge.onEntityPicked(id.substring(0, sep), id.substring(sep + 1));
+    } else {
+      bridge.onEntityPicked('', '');
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
   window.GEV = {
     setView: setView,
     resetGlobe: function () {
       clearPin();
+      viewer.trackedEntity = undefined;
       setView({ longitude: 0, latitude: 18, height: 22000000, heading: 0, pitch: -90, roll: 0 });
     },
+    renderLayer: renderLayer,
+    clearLayer: clearLayer,
+    setFollow: setFollow,
     flyTo: flyTo,
     showPin: showPin,
     clearPin: clearPin,

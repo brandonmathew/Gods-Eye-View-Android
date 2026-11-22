@@ -33,6 +33,7 @@ fun CesiumGlobe(
     modifier: Modifier = Modifier,
     onDiagnostics: (String) -> Unit = {},
     onConsoleMessage: (String) -> Unit = {},
+    onEntityPicked: (layerId: String, entityId: String?) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val assetLoader = remember {
@@ -65,6 +66,11 @@ fun CesiumGlobe(
             @JavascriptInterface
             fun onDiagnostics(json: String) {
                 onDiagnostics(json)
+            }
+
+            @JavascriptInterface
+            fun onEntityPicked(layerId: String, entityId: String) {
+                onEntityPicked(layerId, entityId.ifEmpty { null })
             }
         }
     }
