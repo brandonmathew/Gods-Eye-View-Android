@@ -34,6 +34,9 @@ class GlobeController {
 
     fun setBasemap(basemap: Basemap) = eval("window.GEV && window.GEV.setBasemap('${basemap.id}')")
 
+    /** Issue #12 diagnostics: ask the page to send its current globe state. */
+    fun reportDiagnostics() = eval("window.GEV && window.GEV.reportDiagnostics()")
+
     private fun eval(js: String) {
         val view = webView
         if (view == null || !ready) {

@@ -34,6 +34,8 @@ fun GlobeControlBar(
     onResetGlobe: () -> Unit,
     resetLabel: String,
     modifier: Modifier = Modifier,
+    onGlobeStatus: (() -> Unit)? = null,
+    statusLabel: String = "",
 ) {
     Row(
         modifier = modifier
@@ -44,5 +46,8 @@ fun GlobeControlBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = onResetGlobe) { Text(resetLabel) }
+        if (onGlobeStatus != null) {
+            TextButton(onClick = onGlobeStatus) { Text(statusLabel) }
+        }
     }
 }

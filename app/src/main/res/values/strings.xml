@@ -11,4 +11,9 @@
     <string name="crash_copy">Copy crash details</string>
     <string name="crash_restart">Restart</string>
     <string name="crash_close">Close</string>
+    <string name="globe_status">Globe status</string>
+    <string name="diagnostics_title">Globe status</string>
+    <string name="diagnostics_none">No globe data received yet. Wait a few seconds and try again.</string>
+    <string name="diagnostics_copy">Copy status</string>
+    <string name="diagnostics_close">Close</string>
 </resources>
