@@ -163,8 +163,11 @@ private fun GlobeScreen() {
        modules register here at startup; with none registered the manager
        simply idles and the Layers panel shows its empty state. */
     val layerManager = remember {
+        val registry = com.makoallc.godseyeview.layerapi.LayerRegistry()
+        // Stage 4 proof registration (issue #47): deleted after confirmation.
+        registry.register(com.makoallc.godseyeview.layersample.SampleLayer())
         com.makoallc.godseyeview.layers.LayerManager(
-            registry = com.makoallc.godseyeview.layerapi.LayerRegistry(),
+            registry = registry,
             controller = controller,
         )
     }
