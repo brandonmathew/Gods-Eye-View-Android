@@ -20,4 +20,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "GodsEyeViewAndroid"
-include(":app", ":core-globe", ":core-ui", ":layer-api")
+include(":app", ":core-globe", ":core-ui", ":layer-api", ":layer-sample")
