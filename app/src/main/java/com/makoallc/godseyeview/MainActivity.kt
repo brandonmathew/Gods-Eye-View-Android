@@ -83,6 +83,7 @@ private fun GlobeScreen() {
     val consoleLines = remember { mutableListOf<String>() }
     var showDiagnostics by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showCredits by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         CesiumGlobe(
@@ -187,6 +188,7 @@ private fun GlobeScreen() {
                     hasToken = false
                     controller.setIonToken(null)
                 },
+                onOpenCredits = { showCredits = true },
                 effectiveQualityLabel = when (effectiveQuality) {
                     com.makoallc.godseyeview.settings.QualityMode.HIGH ->
                         stringResource(R.string.settings_quality_high)
@@ -197,6 +199,11 @@ private fun GlobeScreen() {
                     com.makoallc.godseyeview.settings.QualityMode.AUTO -> ""
                 },
                 onBack = { showSettings = false },
+            )
+        }
+        if (showCredits) {
+            com.makoallc.godseyeview.settings.CreditsScreen(
+                onBack = { showCredits = false },
             )
         }
         if (showDiagnostics) {
