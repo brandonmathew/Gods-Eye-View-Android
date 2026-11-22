@@ -58,6 +58,9 @@ private fun GlobeScreen() {
     var cacheSizeMb by remember {
         mutableStateOf(com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context))
     }
+    val effectiveQuality = com.makoallc.godseyeview.settings.QualityResolver
+        .effectiveMode(context, qualityMode)
+    val controller = remember { GlobeController() }
     // Plan Q19 cap enforcement: over the limit at launch -> clear once.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (cacheSizeMb > cacheLimitMb) {
@@ -66,9 +69,6 @@ private fun GlobeScreen() {
             cacheSizeMb = com.makoallc.godseyeview.settings.CacheInfo.sizeMb(context)
         }
     }
-    val effectiveQuality = com.makoallc.godseyeview.settings.QualityResolver
-        .effectiveMode(context, qualityMode)
-    val controller = remember { GlobeController() }
     val initialView = remember { store.load() ?: CameraViewState.FULL_EARTH }
     var basemap by remember { mutableStateOf(store.loadBasemap()) }
     val snackbar = remember { SnackbarHostState() }
