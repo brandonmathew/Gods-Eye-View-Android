@@ -68,6 +68,8 @@ fun GlobeActionBar(
     myLocationLabel: String = "",
     onShare: (() -> Unit)? = null,
     shareLabel: String = "",
+    onLayers: (() -> Unit)? = null,
+    layersLabel: String = "",
 ) {
     Row(
         modifier = modifier
@@ -85,6 +87,9 @@ fun GlobeActionBar(
         }
         if (onShare != null) {
             TextButton(onClick = onShare) { Text(shareLabel) }
+        }
+        if (onLayers != null) {
+            TextButton(onClick = onLayers) { Text(layersLabel) }
         }
     }
 }

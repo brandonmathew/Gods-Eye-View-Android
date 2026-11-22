@@ -157,6 +157,7 @@ private fun GlobeScreen() {
     var showSettings by remember { mutableStateOf(false) }
     var showCredits by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
+    var showLayers by remember { mutableStateOf(false) }
 
     /* Stage 4 (issues #45/#47): the layer registry + fetch manager. Layer
        modules register here at startup; with none registered the manager
@@ -236,6 +237,7 @@ private fun GlobeScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            com.makoallc.godseyeview.layers.EntityCard(manager = layerManager)
             if (locationStatus.isNotEmpty()) {
                 GlobeChip(text = locationStatus)
             }
@@ -289,9 +291,14 @@ private fun GlobeScreen() {
                     )
                 },
                 shareLabel = stringResource(R.string.share_button),
+                onLayers = { showLayers = true },
+                layersLabel = stringResource(R.string.layers_button),
             )
             GlobeControlBar(
-                onResetGlobe = { controller.resetGlobe() },
+                onResetGlobe = {
+                    layerManager.select(null)
+                    controller.resetGlobe()
+                },
                 resetLabel = stringResource(R.string.reset_globe),
                 onGlobeStatus = {
                     controller.reportDiagnostics()
@@ -300,6 +307,12 @@ private fun GlobeScreen() {
                 statusLabel = stringResource(R.string.globe_status),
                 onSettings = { showSettings = true },
                 settingsLabel = stringResource(R.string.settings_button),
+            )
+        }
+        if (showLayers) {
+            com.makoallc.godseyeview.layers.LayerPanel(
+                manager = layerManager,
+                onBack = { showLayers = false },
             )
         }
         if (showSearch) {
