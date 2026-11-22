@@ -67,6 +67,7 @@ private fun GlobeScreen() {
         CesiumGlobe(
             controller = controller,
             initialView = initialView,
+            initialBasemap = basemap,
             onCameraChanged = { view -> store.save(view) },
             onBasemapChanged = { newBasemap ->
                 basemap = newBasemap
@@ -109,6 +110,12 @@ private fun GlobeScreen() {
                 basemapLabel = stringResource(
                     if (basemap == Basemap.OSM) R.string.basemap_osm else R.string.basemap_esri,
                 ),
+                basemap = basemap,
+                onBasemapSelected = { selected ->
+                    basemap = selected
+                    store.saveBasemap(selected)
+                    controller.setBasemap(selected)
+                },
                 onBack = { showSettings = false },
             )
         }

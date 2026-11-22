@@ -22,9 +22,14 @@ class GlobeController {
         }
     }
 
-    fun onPageReady(initialView: CameraViewState) {
+    fun onPageReady(initialView: CameraViewState, initialBasemap: Basemap = Basemap.ESRI) {
         ready = true
         eval("window.GEV && window.GEV.setView(${initialView.toJson()})")
+        if (initialBasemap != Basemap.ESRI) {
+            // The page boots on Esri; re-apply the saved choice so the globe
+            // and the basemap chip agree from the first frame (issue #18).
+            eval("window.GEV && window.GEV.setBasemap('${initialBasemap.id}')")
+        }
         flush()
     }
 

@@ -29,6 +29,9 @@ import com.makoallc.godseyeview.R
 @Composable
 fun SettingsScreen(
     basemapLabel: String,
+    basemap: com.makoallc.godseyeview.core.globe.Basemap =
+        com.makoallc.godseyeview.core.globe.Basemap.ESRI,
+    onBasemapSelected: (com.makoallc.godseyeview.core.globe.Basemap) -> Unit = {},
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -53,9 +56,19 @@ fun SettingsScreen(
         }
         Spacer(Modifier.height(12.dp))
         SettingsSection(title = stringResource(R.string.settings_basemap_title)) {
+            BasemapOption(
+                label = stringResource(R.string.basemap_esri),
+                selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.ESRI,
+                onSelect = { onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.ESRI) },
+            )
+            BasemapOption(
+                label = stringResource(R.string.basemap_osm),
+                selected = basemap == com.makoallc.godseyeview.core.globe.Basemap.OSM,
+                onSelect = { onBasemapSelected(com.makoallc.godseyeview.core.globe.Basemap.OSM) },
+            )
             Text(
-                text = basemapLabel,
-                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.settings_basemap_note),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
         SettingsSection(title = stringResource(R.string.settings_terrain_title)) {
@@ -94,6 +107,21 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
+    }
+}
+
+@Composable
+private fun BasemapOption(
+    label: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        androidx.compose.material3.RadioButton(selected = selected, onClick = onSelect)
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
