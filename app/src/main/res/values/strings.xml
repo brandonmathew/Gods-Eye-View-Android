@@ -27,6 +27,9 @@
     <string name="search_go">Search</string>
     <string name="search_searching">Searching…</string>
     <string name="search_none">No results. Try a different name, or enter coordinates as lat, lon.</string>
+    <string name="my_location_button">My Location</string>
+    <string name="location_denied">Location permission denied — My Location needs it to show where you are.</string>
+    <string name="location_unavailable">Could not get a location fix. Check that device location is on, then try again.</string>
     <string name="settings_quality_title">Quality</string>
     <string name="settings_quality_auto">Auto (picked from device specs)</string>
     <string name="settings_quality_high">High</string>

@@ -69,6 +69,13 @@ class GlobeController {
                 "${fmt(longitude)}, ${fmt(latitude)}, ${org.json.JSONObject.quote(label)})",
         )
 
+    /** Issue #34: the My Location dot (separate from the search pin). */
+    fun showLocationDot(longitude: Double, latitude: Double) =
+        eval(
+            "window.GEV && window.GEV.showLocationDot(" +
+                "${fmt(longitude)}, ${fmt(latitude)})",
+        )
+
     private fun fmt(value: Double): String =
         String.format(java.util.Locale.US, "%.6f", value)
 

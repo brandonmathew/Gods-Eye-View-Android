@@ -431,6 +431,23 @@
     }
   }
 
+  /* My Location dot (issue #34): its own entity, separate from the
+     search pin - it marks where the user is, not a search result. */
+  var locationDot = null;
+  function showLocationDot(lon, lat) {
+    if (locationDot) viewer.entities.remove(locationDot);
+    locationDot = viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(lon, lat),
+      point: {
+        pixelSize: 14,
+        color: Cesium.Color.fromCssColorString('#2E7CF6'),
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 3,
+        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+      }
+    });
+  }
+
   window.GEV = {
     setView: setView,
     resetGlobe: function () {
@@ -440,6 +457,7 @@
     flyTo: flyTo,
     showPin: showPin,
     clearPin: clearPin,
+    showLocationDot: showLocationDot,
     setBasemap: setBasemap,
     setQuality: setQuality,
     setIonToken: setIonToken,

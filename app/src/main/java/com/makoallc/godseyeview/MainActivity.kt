@@ -84,6 +84,54 @@ private fun GlobeScreen() {
     val effectiveQuality = com.makoallc.godseyeview.settings.QualityResolver
         .effectiveMode(context, qualityMode)
     val controller = remember { GlobeController() }
+    /* Issue #34: My Location - tap-only, single fix, never on launch (Q16). */
+    var locationStatus by remember { mutableStateOf("") }
+    fun flyToDeviceLocation() {
+        val manager = context.getSystemService(android.content.Context.LOCATION_SERVICE)
+            as android.location.LocationManager
+        val providers = listOf(
+            android.location.LocationManager.GPS_PROVIDER,
+            android.location.LocationManager.NETWORK_PROVIDER,
+        )
+        val lastKnown = providers.firstNotNullOfOrNull { provider ->
+            runCatching { manager.getLastKnownLocation(provider) }.getOrNull()
+        }
+        fun useFix(loc: android.location.Location) {
+            locationStatus = ""
+            controller.flyTo(loc.longitude, loc.latitude, 3_000.0)
+            controller.showLocationDot(loc.longitude, loc.latitude)
+        }
+        val active = providers.firstOrNull { provider ->
+            runCatching { manager.isProviderEnabled(provider) }.getOrDefault(false)
+        }
+        if (active == null) {
+            if (lastKnown != null) useFix(lastKnown)
+            else locationStatus = context.getString(R.string.location_unavailable)
+            return
+        }
+        runCatching {
+            manager.getCurrentLocation(
+                active, null,
+                androidx.core.content.ContextCompat.getMainExecutor(context),
+            ) { loc ->
+                when {
+                    loc != null -> useFix(loc)
+                    lastKnown != null -> useFix(lastKnown)
+                    else -> locationStatus = context.getString(R.string.location_unavailable)
+                }
+            }
+        }.onFailure {
+            if (lastKnown != null) useFix(lastKnown)
+            else locationStatus = context.getString(R.string.location_unavailable)
+        }
+    }
+    val locationPermissionLauncher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) flyToDeviceLocation()
+            else locationStatus = context.getString(R.string.location_denied)
+        }
     // Plan Q19 cap enforcement: over the limit at launch -> clear once.
     androidx.compose.runtime.LaunchedEffect(Unit) {
         if (cacheSizeMb > cacheLimitMb) {
@@ -153,9 +201,25 @@ private fun GlobeScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (locationStatus.isNotEmpty()) {
+                GlobeChip(text = locationStatus)
+            }
             com.makoallc.godseyeview.core.ui.GlobeActionBar(
                 onSearch = { showSearch = true },
                 searchLabel = stringResource(R.string.search_button),
+                onMyLocation = {
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(
+                            context, android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    ) {
+                        flyToDeviceLocation()
+                    } else {
+                        locationPermissionLauncher.launch(
+                            android.Manifest.permission.ACCESS_FINE_LOCATION,
+                        )
+                    }
+                },
+                myLocationLabel = stringResource(R.string.my_location_button),
             )
             GlobeControlBar(
                 onResetGlobe = { controller.resetGlobe() },
