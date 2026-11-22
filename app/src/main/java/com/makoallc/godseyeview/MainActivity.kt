@@ -50,6 +50,12 @@ class MainActivity : ComponentActivity() {
 private fun GlobeScreen() {
     val context = LocalContext.current
     val store = remember { LastViewStore(context) }
+    val settingsStore = remember { com.makoallc.godseyeview.settings.SettingsStore(context) }
+    var qualityMode by remember {
+        mutableStateOf(settingsStore.loadQualityMode())
+    }
+    val effectiveQuality = com.makoallc.godseyeview.settings.QualityResolver
+        .effectiveMode(context, qualityMode)
     val controller = remember { GlobeController() }
     val initialView = remember { store.load() ?: CameraViewState.FULL_EARTH }
     var basemap by remember { mutableStateOf(store.loadBasemap()) }
@@ -68,6 +74,7 @@ private fun GlobeScreen() {
             controller = controller,
             initialView = initialView,
             initialBasemap = basemap,
+            initialQualityId = effectiveQuality.id,
             onCameraChanged = { view -> store.save(view) },
             onBasemapChanged = { newBasemap ->
                 basemap = newBasemap
@@ -115,6 +122,24 @@ private fun GlobeScreen() {
                     basemap = selected
                     store.saveBasemap(selected)
                     controller.setBasemap(selected)
+                },
+                qualityMode = qualityMode,
+                onQualitySelected = { selected ->
+                    qualityMode = selected
+                    settingsStore.saveQualityMode(selected)
+                    controller.setQuality(
+                        com.makoallc.godseyeview.settings.QualityResolver
+                            .effectiveMode(context, selected).id,
+                    )
+                },
+                effectiveQualityLabel = when (effectiveQuality) {
+                    com.makoallc.godseyeview.settings.QualityMode.HIGH ->
+                        stringResource(R.string.settings_quality_high)
+                    com.makoallc.godseyeview.settings.QualityMode.BALANCED ->
+                        stringResource(R.string.settings_quality_balanced)
+                    com.makoallc.godseyeview.settings.QualityMode.BATTERY_SAVER ->
+                        stringResource(R.string.settings_quality_battery)
+                    com.makoallc.godseyeview.settings.QualityMode.AUTO -> ""
                 },
                 onBack = { showSettings = false },
             )

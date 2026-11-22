@@ -22,7 +22,11 @@ class GlobeController {
         }
     }
 
-    fun onPageReady(initialView: CameraViewState, initialBasemap: Basemap = Basemap.ESRI) {
+    fun onPageReady(
+        initialView: CameraViewState,
+        initialBasemap: Basemap = Basemap.ESRI,
+        initialQualityId: String = "balanced",
+    ) {
         ready = true
         eval("window.GEV && window.GEV.setView(${initialView.toJson()})")
         if (initialBasemap != Basemap.ESRI) {
@@ -30,6 +34,7 @@ class GlobeController {
             // and the basemap chip agree from the first frame (issue #18).
             eval("window.GEV && window.GEV.setBasemap('${initialBasemap.id}')")
         }
+        eval("window.GEV && window.GEV.setQuality('$initialQualityId')")
         flush()
     }
 
@@ -38,6 +43,9 @@ class GlobeController {
     fun resetGlobe() = eval("window.GEV && window.GEV.resetGlobe()")
 
     fun setBasemap(basemap: Basemap) = eval("window.GEV && window.GEV.setBasemap('${basemap.id}')")
+
+    fun setQuality(effectiveModeId: String) =
+        eval("window.GEV && window.GEV.setQuality('$effectiveModeId')")
 
     /** Issue #12 diagnostics: ask the page to send its current globe state. */
     fun reportDiagnostics() = eval("window.GEV && window.GEV.reportDiagnostics()")
